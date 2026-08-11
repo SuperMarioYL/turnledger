@@ -72,3 +72,4 @@ Thumbs.db
 # local sqlite ledger (do not ship runtime DBs)
 turnledger.db
 *.db
+_build_ctx.json
