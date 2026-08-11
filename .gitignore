@@ -1,0 +1,74 @@
+# build scratch
+.build_metadata*
+.build_metadata.slices.yaml
+.builder_prompt.md
+.spawn.*
+.builder_*
+.stage_*
+BUILD_SETUP_NEXT_STEPS.md
+PUBLISH_BLOCKED.md
+
+# ai tooling / agent scratch (never ship)
+.claude/
+CLAUDE.md
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+MANIFEST
+
+# venv
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.cache
+
+# type checkers / linters
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# local sqlite ledger (do not ship runtime DBs)
+turnledger.db
+*.db

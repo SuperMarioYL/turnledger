@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 300" width="880" height="300"
+     font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif"
+     role="img" aria-label="Architecture: Agent streaming → TurnLedger suspend → LedgerEntry audit log → resume and continue from cursor">
+  <defs>
+    <marker id="ah-l" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#B9B9C2"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="880" height="300" fill="#F5F5F7"/>
+
+  <!-- static base connectors -->
+  <g stroke="#C9C9D0" stroke-width="1.5" fill="none">
+    <line x1="200" y1="150" x2="245" y2="150" marker-end="url(#ah-l)"/>
+    <line x1="415" y1="150" x2="460" y2="150" marker-end="url(#ah-l)"/>
+    <line x1="630" y1="150" x2="675" y2="150" marker-end="url(#ah-l)"/>
+  </g>
+
+  <!-- marching-dash data flow (period 16, from 32→0 = 2 periods → seamless loop; staggered) -->
+  <g stroke-width="1.5" fill="none" stroke-linecap="round">
+    <line x1="200" y1="150" x2="241" y2="150" stroke="#5E5CE6" stroke-opacity="0.55" stroke-dasharray="6 10">
+      <animate attributeName="stroke-dashoffset" from="32" to="0" dur="1.6s" repeatCount="indefinite"/>
+    </line>
+    <line x1="415" y1="150" x2="456" y2="150" stroke="#0071E3" stroke-opacity="0.55" stroke-dasharray="6 10">
+      <animate attributeName="stroke-dashoffset" from="32" to="0" dur="1.6s" begin="-0.55s" repeatCount="indefinite"/>
+    </line>
+    <line x1="630" y1="150" x2="671" y2="150" stroke="#10A37F" stroke-opacity="0.55" stroke-dasharray="6 10">
+      <animate attributeName="stroke-dashoffset" from="32" to="0" dur="1.6s" begin="-1.1s" repeatCount="indefinite"/>
+    </line>
+  </g>
+
+  <!-- packet dots along each connector -->
+  <g>
+    <circle r="3" fill="#5E5CE6">
+      <animateMotion path="M200,150 L241,150" dur="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.85;1" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="3" fill="#0071E3">
+      <animateMotion path="M415,150 L456,150" dur="2.4s" begin="-0.8s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.85;1" dur="2.4s" begin="-0.8s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="3" fill="#10A37F">
+      <animateMotion path="M630,150 L671,150" dur="2.4s" begin="-1.6s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.85;1" dur="2.4s" begin="-1.6s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- connector labels -->
+  <g font-size="10" font-weight="500" fill="#6E6E73" text-anchor="middle">
+    <text x="222" y="142">barge-in</text>
+    <text x="437" y="142">save</text>
+    <text x="652" y="142">resume</text>
+  </g>
+
+  <!-- nodes: 4 boxes, breathing fill-opacity 0.10↔0.18, staggered negative begin -->
+  <g>
+    <rect x="30" y="110" width="170" height="80" rx="15" fill="#5E5CE6" fill-opacity="0.10" stroke="#5E5CE6" stroke-width="1.5">
+      <animate attributeName="fill-opacity" values="0.10;0.18;0.10" keyTimes="0;0.5;1" dur="3.2s"
+               calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1" repeatCount="indefinite"/>
+    </rect>
+    <text x="115" y="148" text-anchor="middle" font-size="14" font-weight="600" fill="#4B3FC4">Agent turn</text>
+    <text x="115" y="166" text-anchor="middle" font-size="11" font-weight="400" fill="#6E6E73">streaming</text>
+
+    <rect x="245" y="110" width="170" height="80" rx="15" fill="#0071E3" fill-opacity="0.10" stroke="#0071E3" stroke-width="1.5">
+      <animate attributeName="fill-opacity" values="0.10;0.18;0.10" keyTimes="0;0.5;1" dur="3.2s" begin="-0.8s"
+               calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1" repeatCount="indefinite"/>
+    </rect>
+    <text x="330" y="148" text-anchor="middle" font-size="14" font-weight="600" fill="#0A4F9E">TurnLedger</text>
+    <text x="330" y="166" text-anchor="middle" font-size="11" font-weight="400" fill="#6E6E73">suspend · resume</text>
+
+    <rect x="460" y="110" width="170" height="80" rx="15" fill="#10A37F" fill-opacity="0.10" stroke="#10A37F" stroke-width="1.5">
+      <animate attributeName="fill-opacity" values="0.10;0.18;0.10" keyTimes="0;0.5;1" dur="3.2s" begin="-1.6s"
+               calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1" repeatCount="indefinite"/>
+    </rect>
+    <text x="545" y="148" text-anchor="middle" font-size="14" font-weight="600" fill="#0B6B53">LedgerEntry</text>
+    <text x="545" y="166" text-anchor="middle" font-size="11" font-weight="400" fill="#6E6E73">append-only audit</text>
+
+    <rect x="675" y="110" width="170" height="80" rx="15" fill="#5E5CE6" fill-opacity="0.10" stroke="#5E5CE6" stroke-width="1.5">
+      <animate attributeName="fill-opacity" values="0.10;0.18;0.10" keyTimes="0;0.5;1" dur="3.2s" begin="-2.4s"
+               calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1" repeatCount="indefinite"/>
+    </rect>
+    <text x="760" y="148" text-anchor="middle" font-size="14" font-weight="600" fill="#4B3FC4">continue</text>
+    <text x="760" y="166" text-anchor="middle" font-size="11" font-weight="400" fill="#6E6E73">from cursor</text>
+  </g>
+
+  <!-- phase legend -->
+  <g font-size="11" fill="#6E6E73">
+    <text x="30" y="240">turn = save / yield / resume-continue — not abort-and-restart</text>
+    <text x="30" y="258">barge-in → suspend(cursor+payload) → yield floor → resume() → continue</text>
+  </g>
+</svg>
