@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "name": "turnledger",
+  "github": "https://github.com/SuperMarioYL/turnledger",
+  "host": "turnledger.lei6393.com",
+  "lang": { "primary": "zh", "toggle": true },
+  "accent": ["#8b7cf6", "#4d9bff", "#34e5d0"],
+  "hero": {
+    "eyebrow": {
+      "zh": "实时语音 · 插话感知 · 开源",
+      "en": "Real-time voice · Barge-in aware · Open source"
+    },
+    "headline": {
+      "zh": "用户中途插话，助手让出话轮；用户说完，从被打断处续接——不抢话，不重头开始",
+      "en": "When the user interrupts, the agent lets them speak; once they finish, it continues from the interrupted point — no talking over, no restart"
+    },
+    "sub": {
+      "zh": "插话的瞬间，它记下助手说到哪个字、做到哪一步；用户说完，就从这个点继续——而非丢掉整轮重来。",
+      "en": "The moment the user cuts in, it remembers exactly how far the agent got — word and step — then resumes from that point once they finish, instead of scrapping the whole turn."
+    },
+    "command": "pip install turnledger && turnledger demo"
+  },
+  "advantages": [
+    {
+      "title": { "zh": "续接，而非重来", "en": "Continues, never restarts" },
+      "body": {
+        "zh": "用户中途插话时，助手让出话轮并保存进度；等用户说完，从被打断的那个字接着往下说——不再把已经讲过的话从头复述一遍。",
+        "en": "When the user cuts in mid-sentence, the agent steps aside and saves its place; once they finish, it picks up from the exact interrupted word — instead of re-stating everything from the top."
+      },
+      "chips": ["› Picks up at the exact word", "› No re-stating what was said"]
+    },
+    {
+      "title": { "zh": "接得上真实语音助手", "en": "Plugs into real voice agents" },
+      "body": {
+        "zh": "不只是文本演示——续接接到了真实语音助手自身的插话事件：检测到你和助手同时说话就暂停，你一说完就续接。还能按单句话、按单次工具调用决定是否允许打断。",
+        "en": "Not a text-only demo — continuation is wired to a real voice agent's own interrupt events: the moment your speech overlaps the agent's, it pauses; the moment you finish, it resumes. You can also allow or block interruptions per utterance and per tool call."
+      },
+      "chips": ["› Pauses when you talk over it", "› Per-utterance & per-tool-call control"]
+    },
+    {
+      "title": { "zh": "每次中断，有据可查", "en": "Every interruption, on the record" },
+      "body": {
+        "zh": "每一次让出与续接都落成一条持久记录，跨重启不丢、可查询；排障和合规审计都能回溯某一轮被插话时助手说到哪、做到哪一步。",
+        "en": "Every yield and resume becomes a durable record that survives restarts and stays queryable — so for debugging or compliance you can trace exactly where an interrupted turn was, word and step."
+      },
+      "chips": ["› Durable across restarts", "› Queryable audit trail"]
+    }
+  ],
+  "scene": { "kind": "hub-nodes", "nodes": ["LiveKit Agent", "Pipecat", "Dify", "Text Stream"] },
+  "cta": {
+    "headline": {
+      "zh": "给你的语音助手，加上被打断也能续接的能力",
+      "en": "Give your voice agent the ability to continue after an interrupt"
+    },
+    "sub": {
+      "zh": "一条命令，本地并排对比：从被打断处续接 vs 从头重来。",
+      "en": "One command, locally, side by side: continue from the interrupt vs a fresh restart."
+    },
+    "button": { "zh": "在 GitHub 上查看", "en": "View on GitHub" }
+  },
+  "footer": {
+    "tag": {
+      "zh": "实时语音助手，被打断也续接 · MIT 开源",
+      "en": "Real-time voice agents that continue after an interrupt · MIT open source"
+    }
+  }
+}
