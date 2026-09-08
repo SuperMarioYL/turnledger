@@ -1,0 +1,10 @@
+{
+  "version": "0.1.0",
+  "fixture": "Four synthetic text chunks in the shipped simulator plus an actual local SQLite reopen. No audio, LiveKit session or model request.",
+  "steps": [
+    {
+      "command": "python examples/presentation_demo.py",
+      "output": "{\n  \"continue_output\": \"ABCD\",\n  \"restart_comparison\": \"ABABCD\",\n  \"restored_cursor\": 2,\n  \"restored_payload\": {\n    \"remaining\": \"CD\"\n  },\n  \"history_phases\": [\n    \"yielding\",\n    \"resuming\"\n  ],\n  \"resumable_after_resume\": false\n}\n"
+    }
+  ]
+}

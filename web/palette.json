@@ -1,0 +1,38 @@
+{
+  "mode": "auto",
+  "id": "56e6c4-6ac1e7-acf6ca-986bd3b07a57",
+  "identity": "https://github.com/supermarioyl/turnledger",
+  "primary": "#56e6c4",
+  "secondary": "#6ac1e7",
+  "highlight": "#acf6ca",
+  "dark": {
+    "bg": "#050c11",
+    "panel": "#0c171d",
+    "code": "#0a171b",
+    "ink": "#eefdf4",
+    "muted": "#95b9be",
+    "line": "#173c38",
+    "primary": "#56e6c4",
+    "secondary": "#6ac1e7",
+    "highlight": "#acf6ca",
+    "accent": "#56e6c4",
+    "buttonStart": "#318470",
+    "buttonEnd": "#457d96",
+    "buttonText": "#ffffff"
+  },
+  "light": {
+    "bg": "#f9fefd",
+    "panel": "#f7fefc",
+    "code": "#f3fdfb",
+    "ink": "#132a2b",
+    "muted": "#557a80",
+    "line": "#cbf7ed",
+    "primary": "#30816e",
+    "secondary": "#447b93",
+    "highlight": "#577c66",
+    "accent": "#30816e",
+    "buttonStart": "#318470",
+    "buttonEnd": "#457d96",
+    "buttonText": "#ffffff"
+  }
+}

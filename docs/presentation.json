@@ -1,0 +1,90 @@
+{
+  "name": "TurnLedger",
+  "tagline": "Keep the interruption state for continuation.",
+  "architecture": {
+    "title": "Application-owned state, reusable persistence",
+    "nodes": [
+      {
+        "title": "Streaming adapter",
+        "detail": "Report cursor and payload"
+      },
+      {
+        "title": "TurnLedger",
+        "detail": "Suspend / resume lifecycle"
+      },
+      {
+        "title": "Store",
+        "detail": "Memory or SQLite"
+      },
+      {
+        "title": "Resumed entry",
+        "detail": "Return cursor and payload"
+      },
+      {
+        "title": "Application",
+        "detail": "Continue actual work"
+      }
+    ],
+    "edges": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        4
+      ]
+    ]
+  },
+  "process": {
+    "title": "Resume four known text chunks",
+    "steps": [
+      {
+        "title": "Emit A and B",
+        "detail": "Interruption before C"
+      },
+      {
+        "title": "Save cursor 2",
+        "detail": "Payload keeps remaining CD"
+      },
+      {
+        "title": "Restore SQLite",
+        "detail": "Close, reopen and resume"
+      },
+      {
+        "title": "Continue C and D",
+        "detail": "ABCD; restart comparison ABABCD"
+      }
+    ],
+    "result": "No real audio or model; continuation belongs to adapter."
+  },
+  "integrations": {
+    "title": "Current ledger and adapter surfaces",
+    "items": [
+      {
+        "title": "Memory store",
+        "detail": "In-process state"
+      },
+      {
+        "title": "SQLite",
+        "detail": "Local persistence"
+      },
+      {
+        "title": "Text stream",
+        "detail": "Known chunk continuation"
+      },
+      {
+        "title": "LiveKit hooks",
+        "detail": "Optional, needs application wiring"
+      }
+    ]
+  }
+}

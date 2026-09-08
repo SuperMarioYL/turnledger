@@ -1,67 +1,229 @@
 {
-  "schema": 1,
-  "name": "turnledger",
+  "schema": 3,
+  "name": "TurnLedger",
   "github": "https://github.com/SuperMarioYL/turnledger",
   "host": "turnledger.lei6393.com",
-  "lang": { "primary": "zh", "toggle": true },
-  "accent": ["#8b7cf6", "#4d9bff", "#34e5d0"],
+  "palette": "auto",
+  "lang": {
+    "primary": "zh",
+    "toggle": true
+  },
+  "meta": {
+    "visual_profile": "neon-particle",
+    "demo_source": "docs/demo-results.json",
+    "implementation_version": "0.1.0"
+  },
   "hero": {
     "eyebrow": {
-      "zh": "实时语音 · 插话感知 · 开源",
-      "en": "Real-time voice · Barge-in aware · Open source"
+      "zh": "流式状态 · 挂起与续接",
+      "en": "STREAMING STATE · SUSPEND AND RESUME"
     },
     "headline": {
-      "zh": "用户中途插话，助手让出话轮；用户说完，从被打断处续接——不抢话，不重头开始",
-      "en": "When the user interrupts, the agent lets them speak; once they finish, it continues from the interrupted point — no talking over, no restart"
+      "zh": "先让出话轮，\n再取回中断状态。",
+      "en": "Yield the turn.\nRecover the interrupted state."
     },
     "sub": {
-      "zh": "插话的瞬间，它记下助手说到哪个字、做到哪一步；用户说完，就从这个点继续——而非丢掉整轮重来。",
-      "en": "The moment the user cuts in, it remembers exactly how far the agent got — word and step — then resumes from that point once they finish, instead of scrapping the whole turn."
+      "zh": "TurnLedger 保存一轮输出被打断时的 cursor 与 payload，支持内存或 SQLite 存储，再把挂起状态交还给 adapter 继续处理。",
+      "en": "TurnLedger stores a turn’s cursor and payload at interruption, using memory or SQLite, and returns the suspended state to an adapter for continuation."
     },
-    "command": "pip install turnledger && turnledger demo"
+    "href": "#quickstart",
+    "cta": {
+      "zh": "运行示例",
+      "en": "Run the example"
+    },
+    "ctaGithub": {
+      "zh": "查看源码",
+      "en": "View source"
+    }
+  },
+  "scene": {
+    "kind": "neon-graph",
+    "fallback": "/assets/presentation/scene-dark.svg",
+    "fallbackLight": "/assets/presentation/scene-light.svg",
+    "caption": {
+      "zh": "把中断位置留给下一次续接",
+      "en": "Keep the interruption state for continuation."
+    }
   },
   "advantages": [
     {
-      "title": { "zh": "续接，而非重来", "en": "Continues, never restarts" },
-      "body": {
-        "zh": "用户中途插话时，助手让出话轮并保存进度；等用户说完，从被打断的那个字接着往下说——不再把已经讲过的话从头复述一遍。",
-        "en": "When the user cuts in mid-sentence, the agent steps aside and saves its place; once they finish, it picks up from the exact interrupted word — instead of re-stating everything from the top."
+      "title": {
+        "zh": "恢复位置明确",
+        "en": "Keep an explicit cursor"
       },
-      "chips": ["› Picks up at the exact word", "› No re-stating what was said"]
+      "body": {
+        "zh": "接入方定义 token、步骤和子步骤位置。",
+        "en": "The integration defines token, step and substep positions."
+      }
     },
     {
-      "title": { "zh": "接得上真实语音助手", "en": "Plugs into real voice agents" },
-      "body": {
-        "zh": "不只是文本演示——续接接到了真实语音助手自身的插话事件：检测到你和助手同时说话就暂停，你一说完就续接。还能按单句话、按单次工具调用决定是否允许打断。",
-        "en": "Not a text-only demo — continuation is wired to a real voice agent's own interrupt events: the moment your speech overlaps the agent's, it pauses; the moment you finish, it resumes. You can also allow or block interruptions per utterance and per tool call."
+      "title": {
+        "zh": "中间数据一起保存",
+        "en": "Carry intermediate payloads"
       },
-      "chips": ["› Pauses when you talk over it", "› Per-utterance & per-tool-call control"]
+      "body": {
+        "zh": "挂起记录可以携带剩余文本或部分工具参数。",
+        "en": "Suspended entries can carry remaining text or partial tool arguments."
+      }
     },
     {
-      "title": { "zh": "每次中断，有据可查", "en": "Every interruption, on the record" },
-      "body": {
-        "zh": "每一次让出与续接都落成一条持久记录，跨重启不丢、可查询；排障和合规审计都能回溯某一轮被插话时助手说到哪、做到哪一步。",
-        "en": "Every yield and resume becomes a durable record that survives restarts and stays queryable — so for debugging or compliance you can trace exactly where an interrupted turn was, word and step."
+      "title": {
+        "zh": "选择本地存储",
+        "en": "Choose local persistence"
       },
-      "chips": ["› Durable across restarts", "› Queryable audit trail"]
+      "body": {
+        "zh": "内存和 SQLite 使用同一账本接口。",
+        "en": "Memory and SQLite share the ledger interface."
+      }
     }
   ],
-  "scene": { "kind": "hub-nodes", "nodes": ["LiveKit Agent", "Pipecat", "Dify", "Text Stream"] },
-  "cta": {
-    "headline": {
-      "zh": "给你的语音助手，加上被打断也能续接的能力",
-      "en": "Give your voice agent the ability to continue after an interrupt"
+  "story": {
+    "intro": {
+      "title": {
+        "zh": "把中断位置留给下一次续接",
+        "en": "Keep the interruption state for continuation."
+      },
+      "body": {
+        "zh": "长输出被打断时，应用需要知道哪些内容已经发出、哪些中间参数还没处理完。把这个位置显式保存，可以让接入方选择从剩余内容继续，而不是丢失状态后重播。账本保存状态，不会替任意模型或音频后端恢复内部执行。",
+        "en": "An interrupted long response needs an explicit record of what was emitted and which intermediate work remains. Saving that state lets an integration continue with remaining content rather than replaying after losing its place. The ledger stores state; it does not restore arbitrary model or audio-engine internals."
+      }
     },
-    "sub": {
-      "zh": "一条命令，本地并排对比：从被打断处续接 vs 从头重来。",
-      "en": "One command, locally, side by side: continue from the interrupt vs a fresh restart."
-    },
-    "button": { "zh": "在 GitHub 上查看", "en": "View on GitHub" }
+    "sections": [
+      {
+        "title": {
+          "zh": "从输入到结果",
+          "en": "From input to result"
+        },
+        "body": {
+          "zh": "四个构造文本片段 A/B/C/D 在索引 2 处中断。真实文本 adapter 的续接输出为 ABCD，显式 restart 对照为 ABABCD。另一轮将 cursor=2 和 remaining=CD 保存到 SQLite，关闭后重开并恢复，历史含 yielding/resuming，随后不可再次恢复同一挂起项。",
+          "en": "Four constructed text chunks A/B/C/D are interrupted at index two. The real text adapter emits ABCD in continuation mode and ABABCD in its explicit restart comparison. A separate turn saves cursor=2 and remaining=CD in SQLite, closes and reopens the store, then restores yielding/resuming history with no pending resume left."
+        },
+        "image": {
+          "light": "/assets/presentation/process-light.svg",
+          "dark": "/assets/presentation/process-dark.svg",
+          "alt": {
+            "zh": "从输入到结果",
+            "en": "From input to result"
+          }
+        }
+      },
+      {
+        "title": {
+          "zh": "实现中的分工",
+          "en": "How the implementation fits together"
+        },
+        "body": {
+          "zh": "TurnCursor 表示 token/step/sub_step，Ledger 缓存 report 的当前位置，suspend 写 yielding 记录，resume 取最近未恢复记录并写 resuming。Store 有 InMemory 与 SQLite 实现。文本 adapter 使用返回索引继续已知 token 列表；可选 LiveKit adapter 将事件接到账本，进一步恢复生成/播放仍由应用负责。",
+          "en": "TurnCursor describes token/step/sub_step. Ledger caches positions reported by the caller, suspend stores yielding, and resume retrieves a pending entry and records resuming. Store has memory and SQLite implementations. The text adapter continues a known token list from the returned index. Optional LiveKit hooks update ledger state; restoring generation/playout belongs to the application."
+        },
+        "image": {
+          "light": "/assets/presentation/architecture-light.svg",
+          "dark": "/assets/presentation/architecture-dark.svg",
+          "alt": {
+            "zh": "实现中的分工",
+            "en": "How the implementation fits together"
+          }
+        }
+      },
+      {
+        "title": {
+          "zh": "接入现有工作流",
+          "en": "Connect existing workflows"
+        },
+        "body": {
+          "zh": "TurnLedger 保存一轮输出被打断时的 cursor 与 payload，支持内存或 SQLite 存储，再把挂起状态交还给 adapter 继续处理。",
+          "en": "TurnLedger stores a turn’s cursor and payload at interruption, using memory or SQLite, and returns the suspended state to an adapter for continuation."
+        },
+        "image": {
+          "light": "/assets/presentation/integrations-light.svg",
+          "dark": "/assets/presentation/integrations-dark.svg",
+          "alt": {
+            "zh": "接入现有工作流",
+            "en": "Connect existing workflows"
+          }
+        }
+      }
+    ],
+    "details": [
+      {
+        "title": {
+          "zh": "配置与边界",
+          "en": "Configuration and limits"
+        },
+        "body": {
+          "zh": "保存 cursor 不等于任意模型/语音流可以精确恢复，adapter 必须实现实际续接。",
+          "en": "Saving a cursor does not make arbitrary model/audio streams resumable; the adapter must implement continuation."
+        }
+      }
+    ]
   },
+  "demo": {
+    "title": {
+      "zh": "运行自带示例",
+      "en": "Run the supplied example"
+    },
+    "note": {
+      "zh": "v0.1.0 的文本模拟器与真实 SQLite 关闭/重开。restart 是同一示例自定义的对照模式，不代表其他语音产品的默认行为；没有实际音频或模型请求。",
+      "en": "The v0.1.0 text simulator and a real SQLite close/reopen. Restart is the example’s explicit comparison mode, not a claim about other voice products’ defaults. No actual audio or model request is involved."
+    },
+    "source": "https://github.com/SuperMarioYL/turnledger/blob/main/docs/demo-results.json",
+    "steps": [
+      {
+        "label": {
+          "zh": "运行 1",
+          "en": "Run 1"
+        },
+        "body": {
+          "zh": "四个构造文本片段 A/B/C/D 在索引 2 处中断。真实文本 adapter 的续接输出为 ABCD，显式 restart 对照为 ABABCD。另一轮将 cursor=2 和 remaining=CD 保存到 SQLite，关闭后重开并恢复，历史含 yielding/resuming，随后不可再次恢复同一挂起项。",
+          "en": "Four constructed text chunks A/B/C/D are interrupted at index two. The real text adapter emits ABCD in continuation mode and ABABCD in its explicit restart comparison. A separate turn saves cursor=2 and remaining=CD in SQLite, closes and reopens the store, then restores yielding/resuming history with no pending resume left."
+        },
+        "image": "/assets/presentation/demo-0-light.svg",
+        "imageDark": "/assets/presentation/demo-0-dark.svg",
+        "command": "python examples/presentation_demo.py",
+        "output": "{\n  \"continue_output\": \"ABCD\",\n  \"restart_comparison\": \"ABABCD\",\n  \"restored_cursor\": 2,\n  \"restored_payload\": {\n    \"remaining\": \"CD\"\n  },\n  \"history_phases\": [\n    \"yielding\",\n    \"resuming\"\n  ],\n  \"resumable_after_resume\": false\n}\n"
+      }
+    ]
+  },
+  "quickstart": {
+    "title": {
+      "zh": "运行完整示例",
+      "en": "Run the complete example"
+    },
+    "body": {
+      "zh": "需要 Python 3.10+。安装可能联网；下面的文本与 SQLite 示例无需音频、LiveKit 或模型服务。",
+      "en": "Requires Python 3.10+. Installation may need network access; the text/SQLite demo needs no audio, LiveKit or model service."
+    },
+    "steps": [
+      {
+        "title": {
+          "zh": "准备环境",
+          "en": "Prepare the environment"
+        },
+        "code": "git clone https://github.com/SuperMarioYL/turnledger.git\ncd turnledger\npython3 -m venv .venv\nsource .venv/bin/activate\npython -m pip install -e ."
+      },
+      {
+        "title": {
+          "zh": "运行本地示例",
+          "en": "Run the local example"
+        },
+        "code": "python examples/presentation_demo.py"
+      }
+    ]
+  },
+  "limitations": [
+    {
+      "zh": "保存 cursor 不等于任意模型/语音流可以精确恢复，adapter 必须实现实际续接。",
+      "en": "Saving a cursor does not make arbitrary model/audio streams resumable; the adapter must implement continuation."
+    },
+    {
+      "zh": "本轮只验证文本模拟和本地存储，未验证 LiveKit 或真实语音链路。",
+      "en": "This example validates text simulation and local storage, not LiveKit or a real voice pipeline."
+    }
+  ],
   "footer": {
     "tag": {
-      "zh": "实时语音助手，被打断也续接 · MIT 开源",
-      "en": "Real-time voice agents that continue after an interrupt · MIT open source"
+      "zh": "Python 3.10+ · MIT",
+      "en": "Python 3.10+ · MIT"
     }
   }
 }

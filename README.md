@@ -1,198 +1,122 @@
-<div align="right"><sub><a href="./README.en.md">English</a>&nbsp;&nbsp;⇄&nbsp;&nbsp;<b>简体中文</b></sub></div>
+[English](README.en.md) | **简体中文**
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/hero-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/hero-light.svg">
-  <img src="./assets/hero-light.svg" width="880" alt="TurnLedger — interruption-continuation ledger for real-time agents">
+  <source media="(max-width: 640px) and (prefers-color-scheme: dark)" srcset="assets/presentation/hero-mobile-dark.svg">
+  <source media="(max-width: 640px)" srcset="assets/presentation/hero-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/presentation/hero-dark.svg">
+  <img src="assets/presentation/hero-light.svg" width="960" alt="TurnLedger — Keep the interruption state for continuation.">
 </picture>
 
-<p align="center"><sub>面向实时语音 Agent 的中断-续接账本原语：被打断时让出话轮，说完后从中断处续接。</sub></p>
+**TurnLedger 保存一轮输出被打断时的 cursor 与 payload，支持内存或 SQLite 存储，再把挂起状态交还给 adapter 继续处理。**
 
-<p align="center">
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license"></a>
-  <a href="https://github.com/SuperMarioYL/turnledger/releases"><img src="https://img.shields.io/github/v/release/SuperMarioYL/turnledger?color=8985FF" alt="latest release"></a>
-  <a href="https://github.com/SuperMarioYL/turnledger/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/SuperMarioYL/turnledger/ci.yml?branch=main&label=ci" alt="ci"></a>
-  <img src="https://img.shields.io/badge/python-3.10%2B-blue?logo=python" alt="python">
-  <img src="https://img.shields.io/badge/agent-resume--continuity-8985FF" alt="agent anchor">
-  <img src="https://img.shields.io/badge/barge--in-save%20%2F%20yield%20%2F%20resume-10A37F" alt="barge-in resume">
-</p>
+`Python 3.10+` · [MIT](LICENSE) · [GitHub](https://github.com/SuperMarioYL/turnledger) · [网站](https://turnledger.lei6393.com)
 
-**当用户中途插话，TurnLedger 让实时语音 Agent 挂起中间状态、让出话轮，并在用户说完后从被打断处续接——而非抢话，也非从头重启。**
+## 为什么需要它
 
-> 推送后给仓库加 topic：`gh repo edit --add-topic agent --add-topic realtime --add-topic livekit --add-topic barge-in`
-
-## 目录
-
-- [架构](#架构)
-- [为什么需要](#为什么需要)
-- [安装与快速开始](#安装与快速开始)
-- [用法](#用法)
-- [Demo](#demo)
-- [对比](#对比)
-- [路线图](#路线图)
-- [付费 / Pricing](#付费--pricing)
-- [License](#license)
-
-<h2><img src="https://api.iconify.design/tabler:topology-star-3.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> 架构</h2>
+长输出被打断时，应用需要知道哪些内容已经发出、哪些中间参数还没处理完。把这个位置显式保存，可以让接入方选择从剩余内容继续，而不是丢失状态后重播。账本保存状态，不会替任意模型或音频后端恢复内部执行。
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/atlas-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/atlas-light.svg">
-  <img src="./assets/atlas-light.svg" width="880" alt="架构：Agent 流式输出 → barge-in → TurnLedger suspend → LedgerEntry 审计 → resume → 从 cursor 续接">
+  <source media="(max-width: 640px) and (prefers-color-scheme: dark)" srcset="assets/presentation/process-mobile-dark.svg">
+  <source media="(max-width: 640px)" srcset="assets/presentation/process-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/presentation/process-dark.svg">
+  <img src="assets/presentation/process-light.svg" width="960" alt="Resume four known text chunks">
 </picture>
 
-核心是 **interruption-continuation ledger（中断-续接账本）**：一个 append-only 的 `LedgerEntry` 流，在每次 barge-in 时捕获 Agent 挂起的中间步骤状态。同一 Agent 因此可以 *yield*（让出话轮）并在用户说完后 *resume-continue*（从中断处续接），而不是 abort-and-restart（弃掉重来）。
+## 架构
 
-```python
-TurnCursor(token_index, step_index, sub_step)   # 在一轮中被打断的位置
-LedgerEntry(turn_id, seq, phase, cursor, payload, yielded_at, resumed_at)
-TurnLedger.suspend(turn_id) -> LedgerEntry      # 捕获 cursor+payload，标记 yielded
-TurnLedger.resume(turn_id) -> LedgerEntry | None # 重放最新挂起项，标记 resumed
-TurnLedger.is_resumable(turn_id) -> bool
-```
+TurnCursor 表示 token/step/sub_step，Ledger 缓存 report 的当前位置，suspend 写 yielding 记录，resume 取最近未恢复记录并写 resuming。Store 有 InMemory 与 SQLite 实现。文本 adapter 使用返回索引继续已知 token 列表；可选 LiveKit adapter 将事件接到账本，进一步恢复生成/播放仍由应用负责。
 
-<h2><img src="https://api.iconify.design/tabler:bulb.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> 为什么需要</h2>
+<picture>
+  <source media="(max-width: 640px) and (prefers-color-scheme: dark)" srcset="assets/presentation/architecture-mobile-dark.svg">
+  <source media="(max-width: 640px)" srcset="assets/presentation/architecture-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/presentation/architecture-dark.svg">
+  <img src="assets/presentation/architecture-light.svg" width="960" alt="Application-owned state, reusable persistence">
+</picture>
 
-实时语音 Agent 没有中断后续接的原语。今天的两种失败模式：**抢话**（无视用户继续说）或**弃掉重来**（abort 整轮，从头复述已经说过的内容）。后者是全双工语音助手（豆包 / 小爱 / 小布 / 传统 IVR）的默认行为——因为它们的轮次模型是 command→response，"重启"无害，因为没有值得保存的中间产物。续接只有当一轮变得**长、流式、带状态**时才有价值——而这个轮次模型在最近这一周期才真正落地。
+## 安装
 
-TurnLedger 是 [langgenius/dify](https://github.com/langgenius/dify) 这类 Agent 编排器在语音路径上缺失的 save/yield/resume 原语——豆包 / 小爱 / 小布 同样是 drop-and-restart，这个 gap 语言无关。它定义的新动词是 **save / yield / resume-continue**，是 Temporal/DBOS（步骤级崩溃恢复）与 fork 原语（反事实分叉）结构性缺失的：前者粒度是秒级的 workflow step，后者语义是"分叉"而非"同一轮的挂起续接"。
-
-<h2><img src="https://api.iconify.design/tabler:rocket.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> 安装与快速开始</h2>
+需要 Python 3.10+。安装可能联网；下面的文本与 SQLite 示例无需音频、LiveKit 或模型服务。
 
 ```bash
-pip install turnledger
-turnledger demo
-# 流式输出中按 Enter 插话；输入一行 + Enter 结束，Agent 从被打断处续接
+git clone https://github.com/SuperMarioYL/turnledger.git
+cd turnledger
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
 ```
 
-切换对比模式看默认的 drop-and-restart 行为：
+## 快速开始
 
 ```bash
-turnledger demo --contrast     # 同一轮：续接 vs 重头重启，并排可见
+python examples/presentation_demo.py
 ```
 
-<details><summary>示例输出</summary>
+四个构造文本片段 A/B/C/D 在索引 2 处中断。真实文本 adapter 的续接输出为 ABCD，显式 restart 对照为 ABABCD。另一轮将 cursor=2 和 remaining=CD 保存到 SQLite，关闭后重开并恢复，历史含 yielding/resuming，随后不可再次恢复同一挂起项。
 
-```
-TurnLedger — barge-in contrast demo
-Press Enter mid-stream to barge in; type a line + Enter to finish.
-================================================================================
-▶ TurnLedger (resume-continue)
-  So if you want to pick a plan, the Pro tier covers five concurrent agent
-  ⏸ agent yielded the floor
-  ⤵ user barge-in: and multi-region?
-  ▶ resume from token #14
-  ⋯ continuing: seats with the durable ledger and the observability API, ...
-  [ledger] turn=turn-demo suspended_entries=2
-
---------------------------------------------------------------------------------
-▶ Default (drop-and-restart)
-  So if you want to pick a plan, the Pro tier covers five concurrent agent
-  ⏸ agent yielded the floor
-  ⤵ user barge-in: and multi-region?
-  ↻ restart (drop-and-restart default)
-  ⋯ from the top: So if you want to pick a plan, the Pro tier covers ...
-  [ledger] turn=turn-demo suspended_entries=1
-```
-</details>
-
-<h2><img src="https://api.iconify.design/tabler:terminal-2.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> 用法</h2>
-
-**1. 进程内账本：三行接入 save/yield/resume**
+## 用法
 
 ```python
 from turnledger import InMemoryLedger, TurnCursor
-
 ledger = InMemoryLedger()
-# Agent 流式输出时持续 report 当前 cursor
-ledger.report("turn-1", cursor=TurnCursor(token_index=12, sub_step="llm:streaming"))
-# 用户 barge-in：挂起并让出话轮
-entry = ledger.suspend("turn-1")
-# 用户说完：resume，从被打断的 token 续接
-resumed = ledger.resume("turn-1")
-assert resumed.cursor.token_index == 12
+ledger.report("turn-1", cursor=TurnCursor(token_index=2), payload={"remaining": "CD"})
+ledger.suspend("turn-1")
+entry = ledger.resume("turn-1")
+print(entry.cursor.token_index, entry.payload)
 ```
 
-**2. 持久化审计日志（SQLiteStore）**
+交互式文本演示可用 turnledger demo --contrast。自定义后端读取 entry 并决定如何继续。需要显式关闭数据库时，可组合 Ledger(SQLiteStore(path))，完成后调用 store.close()，如本轮示例。
 
-```python
-from turnledger import SQLiteLedger
+## 能力与集成
 
-ledger = SQLiteLedger("turnledger.db")   # 跨重启持久化、可查询审计
-ledger.suspend("turn-1", cursor=TurnCursor(token_index=12),
-               payload={"partial_args": '{"query":"sel'})
-# ledger.history("turn-1")  -> [yielding, resuming, ...] 全量中断历史
+| 接口 | 职责 |
+|---|---|
+| TurnCursor / payload | 接入方定义位置与恢复数据 |
+| InMemoryLedger | 进程内状态 |
+| SQLiteStore / SQLiteLedger | 本地保存挂起/恢复记录 |
+| TextStreamAgent | 从已知文本片段列表继续 |
+| LiveKitLedgerAgent | 可选事件钩子和 resumed_entry |
+| attach_ledger | 订阅中断；恢复钩子需接入方处理 |
+
+<picture>
+  <source media="(max-width: 640px) and (prefers-color-scheme: dark)" srcset="assets/presentation/integrations-mobile-dark.svg">
+  <source media="(max-width: 640px)" srcset="assets/presentation/integrations-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/presentation/integrations-dark.svg">
+  <img src="assets/presentation/integrations-light.svg" width="960" alt="Current ledger and adapter surfaces">
+</picture>
+
+## 配置与边界
+
+核心不需要服务配置。使用不同 turn_id 区分话轮；payload 必须能由选择的存储序列化。report 只更新进程内当前位置，尚未 suspend 的位置不会因此自动持久化。
+
+resume 追加恢复记录，也更新原 yielding 条目的 resumed_at，因此不能把它称为不可变审计日志。核心使用同步本地存储，不提供跨节点一致性。
+
+LiveKit extra 只安装可选依赖，仍需确认版本与适配器导入接口匹配。其 token_index 来自语音计数，不是精确音频采样点；它提供恢复状态，不自动重建已取消的语音/模型流。
+
+## 运行记录
+
+v0.1.0 的文本模拟器与真实 SQLite 关闭/重开。restart 是同一示例自定义的对照模式，不代表其他语音产品的默认行为；没有实际音频或模型请求。
+
+[输入、命令和完整输出](docs/demo-results.json)
+
+[保留的历史终端录屏](assets/demo.gif) · [录制脚本](docs/demo.tape)。本轮示例以以上可重放记录为准。
+
+## 路线图
+
+- [x] cursor/payload 与挂起、恢复 API。
+- [x] 内存、SQLite 和文本对照示例。
+- [x] 可选 LiveKit 事件接入代码。
+- [ ] 更多框架的完整恢复流程与实测。
+- [ ] 跨语言协议和多节点后端。
+
+当前没有已交付的 Cloud 席位套餐或多区域服务。
+
+## 开发与许可证
+
+```bash
+python -m pip install -e ".[test]"
+python -m pytest
 ```
 
-**3. LiveKit 语音 Agent（m2，ship target）**
+协议见 turnledger/protocol.py；文本 adapter 在 turnledger/adapters/text_stream.py。
 
-```python
-from turnledger import InMemoryLedger
-from turnledger.adapters.livekit import LiveKitLedgerAgent
-
-class MyVoiceAgent(LiveKitLedgerAgent):
-    def __init__(self):
-        super().__init__(
-            instructions="你是一个实时的语音助手。",
-            ledger=InMemoryLedger(),
-            interruption_detection="adaptive",   # allow_interruptions=True + ML 检测
-        )
-    # OverlappingSpeechEvent(is_interruption=True) -> ledger.suspend()
-    # on_user_turn_completed                   -> ledger.resume()
-    # 单条 speech 覆盖：speech_handle.allow_interruptions = False
-    # 单个工具调用覆盖：run_ctx.disallow_interruptions()
-```
-
-更多示例见 [`examples/text_barge_in_demo.py`](./examples/text_barge_in_demo.py)（无键盘、可复现的对比脚本）。
-
-<h2><img src="https://api.iconify.design/tabler:photo.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Demo</h2>
-
-![demo](assets/demo.gif)
-
-`docs/demo.tape` 是这条 10 分钟 happy path 的 [vhs](https://github.com/charmbracelet/vhs) 脚本；`.github/workflows/demo.yml` 在手动触发时重新渲染 `assets/demo.gif`。
-
-<h2><img src="https://api.iconify.design/tabler:scale.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> 对比</h2>
-
-TurnLedger vs [langgenius/dify](https://github.com/langgenius/dify)（zh 锚点仓库——中式 Agent 编排器，语音路径缺此原语）：
-
-| 维度 | TurnLedger | langgenius/dify |
-|---|---|---|
-| save / yield / resume-continue 原语 | ✓ 原语级 | — drop-and-restart |
-| 语音 barge-in 续接 | ✓ m2 LiveKit adapter | partial（有 barge-in，无续接） |
-| Agent 编排广度 | — 单一原语 | ✓ 完整工作流 + 生态 |
-| 持久化审计日志 | ✓ SQLiteStore | ✓ 更成熟 |
-| 跨框架协议 | partial（m3 roadmap） | — |
-
-dify 在编排广度与生态上明显更强；TurnLedger 只在一个动词上更深——被打断那一轮的续接。
-
-<h2><img src="https://api.iconify.design/tabler:map-2.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> 路线图</h2>
-
-- [x] **m1** — 账本核心：`TurnCursor` / `LedgerEntry` / `InMemoryStore` + `SQLiteStore` + save/yield/resume `Protocol` + `turnledger demo` 文本流式 CLI（对比模式）
-- [x] **m2** — LiveKit 语音 adapter（ship target）：`OverlappingSpeechEvent` → `ledger.suspend()`、`on_user_turn_completed` → `ledger.resume()`，配置于 `Agent(allow_interruptions=True, interruption_detection=...)`，单条 speech / 单个工具调用覆盖
-- [ ] **m3** — 把 save/yield/resume 握手稳定为跨框架协议规格 + pipecat / dify adapter stub
-- [ ] TurnLedger Cloud 托管后端（多区域账本 + 续接可观测性 API）
-- [ ] TS / Rust / Go SDK 绑定（v0.1 仅 Python）
-
-## 付费 / Pricing
-
-OSS 库（`InMemoryStore` / `SQLiteStore` + 全部 adapter）MIT、永久免费——这是拥有 "save / yield / resume" 这个动词的方式。付费层是 **TurnLedger Cloud**：面向生产语音 Agent 集群的托管后端，提供多区域账本存储 + 续接连续性可观测性 API + 合规审计日志导出，**按并发 Agent 席位计费**。
-
-| 层级 | 价格 | 说明 |
-|---|---|---|
-| Free | $0 | 10 席位，无需信用卡，面向独立开发者（OSS 库本身无限制） |
-| Team | $499 / 月 | 500 席位 + 审计日志导出 |
-| Usage | $0.02 / 席位·小时 | 托管账本 + 可观测性 API，月结（低于单次 LLM 调用成本） |
-
-最小 "掏信用卡" 路径：`turnledger demo --voice livekit`（m2）→ 在 ops 负责人自己的 bot 上复现同一中断 → 展示 OSS `SQLiteStore` 里的 `LedgerEntry` 审计日志 → "Cloud 给你的就是这个：持久化 + 多区域 + 可观测性 API"。Cloud 后端本身在 v0.1 范围外（见 frontmatter out_of_scope）；落地页 + 定价在 m3 之前上线，使漏斗存在。
-
-<h2><img src="https://api.iconify.design/tabler:license.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> License</h2>
-
-MIT，见 [`LICENSE`](./LICENSE)。提 issue / PR 见 [GitHub Issues](https://github.com/SuperMarioYL/turnledger/issues)。
-
-## 分享
-
-```
-TurnLedger — 给实时语音 Agent 加 save/yield/resume-continue 原语。被打断时挂起状态、让出话轮，说完从中断处续接，而非抢话或重头开始。github.com/SuperMarioYL/turnledger
-```
-
-<p align="center"><sub><a href="./LICENSE">MIT</a> © 2026 SuperMarioYL</sub></p>
+[MIT](LICENSE) · [Issues](https://github.com/SuperMarioYL/turnledger/issues)
