@@ -104,6 +104,10 @@
           "alt": {
             "zh": "从输入到结果",
             "en": "From input to result"
+          },
+          "mobile": {
+            "light": "/assets/presentation/process-mobile-light.svg",
+            "dark": "/assets/presentation/process-mobile-dark.svg"
           }
         }
       },
@@ -122,6 +126,10 @@
           "alt": {
             "zh": "实现中的分工",
             "en": "How the implementation fits together"
+          },
+          "mobile": {
+            "light": "/assets/presentation/architecture-mobile-light.svg",
+            "dark": "/assets/presentation/architecture-mobile-dark.svg"
           }
         }
       },
@@ -140,6 +148,10 @@
           "alt": {
             "zh": "接入现有工作流",
             "en": "Connect existing workflows"
+          },
+          "mobile": {
+            "light": "/assets/presentation/integrations-mobile-light.svg",
+            "dark": "/assets/presentation/integrations-mobile-dark.svg"
           }
         }
       }
