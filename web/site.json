@@ -71,10 +71,10 @@
         "zh": "选择本地存储",
         "en": "Choose local persistence"
       },
-      "body": {
-        "zh": "内存和 SQLite 使用同一账本接口。",
-        "en": "Memory and SQLite share the ledger interface."
-      }
+  "body": {
+   "zh": "内存和 SQLite 使用同一账本接口，SQLite 审计日志可用 turnledger history 从命令行读取。",
+   "en": "Memory and SQLite share the ledger interface; the SQLite audit log reads back from the CLI via turnledger history."
+  }
     }
   ],
   "story": {
@@ -175,8 +175,8 @@
       "en": "Run the supplied example"
     },
     "note": {
-      "zh": "v0.1.0 的文本模拟器与真实 SQLite 关闭/重开。restart 是同一示例自定义的对照模式，不代表其他语音产品的默认行为；没有实际音频或模型请求。",
-      "en": "The v0.1.0 text simulator and a real SQLite close/reopen. Restart is the example’s explicit comparison mode, not a claim about other voice products’ defaults. No actual audio or model request is involved."
+      "zh": "v0.2.0 的文本模拟器与真实 SQLite 关闭/重开。restart 是同一示例自定义的对照模式，不代表其他语音产品的默认行为；没有实际音频或模型请求。",
+      "en": "The v0.2.0 text simulator and a real SQLite close/reopen. Restart is the example’s explicit comparison mode, not a claim about other voice products’ defaults. No actual audio or model request is involved."
     },
     "source": "https://github.com/SuperMarioYL/turnledger/blob/main/docs/demo-results.json",
     "steps": [
