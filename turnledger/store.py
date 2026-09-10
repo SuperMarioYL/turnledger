@@ -43,14 +43,18 @@ class InMemoryStore:
     def latest_yielding_for(self, turn_id: str) -> LedgerEntry | None:
         with self._lock:
             for entry in reversed(self._entries.get(turn_id, ())):
-                if entry.phase == "yielding" and entry.resumed_at is None:
+                # A suspend is resumable by STATE (yielded and not yet
+                # resumed), not by phase label: suspend() may stamp
+                # "speaking"/"tool_call" provenance phases (LedgerEntry.
+                # is_suspended defines the same criterion).
+                if entry.yielded_at is not None and entry.resumed_at is None:
                     return entry
             return None
 
     def mark_resumed(self, turn_id: str, seq: int, resumed_at: float) -> None:
         with self._lock:
             for entry in reversed(self._entries.get(turn_id, ())):
-                if entry.seq == seq and entry.phase == "yielding":
+                if entry.seq == seq and entry.resumed_at is None:
                     entry.resumed_at = resumed_at
                     return
 
@@ -147,9 +151,12 @@ class SQLiteStore:
 
     def latest_yielding_for(self, turn_id: str) -> LedgerEntry | None:
         with self._lock:
+            # Resumable by STATE (yielded and not yet resumed), not by phase
+            # label — suspend() may stamp "speaking"/"tool_call" provenance
+            # phases; "resuming" rows stay excluded (resumed_at is set).
             cur = self._conn.execute(
                 "SELECT * FROM ledger_entries "
-                "WHERE turn_id = ? AND phase = 'yielding' AND resumed_at IS NULL "
+                "WHERE turn_id = ? AND yielded_at IS NOT NULL AND resumed_at IS NULL "
                 "ORDER BY seq DESC LIMIT 1",
                 (turn_id,),
             )
@@ -160,7 +167,7 @@ class SQLiteStore:
         with self._lock:
             self._conn.execute(
                 "UPDATE ledger_entries SET resumed_at = ? "
-                "WHERE turn_id = ? AND seq = ? AND phase = 'yielding'",
+                "WHERE turn_id = ? AND seq = ? AND resumed_at IS NULL",
                 (resumed_at, turn_id, seq),
             )
             self._conn.commit()

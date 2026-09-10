@@ -32,7 +32,7 @@ from .ledger import (
 from .protocol import Store, TurnLedger
 from .store import InMemoryStore, SQLiteStore
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "TurnCursor",

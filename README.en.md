@@ -66,6 +66,14 @@ print(entry.cursor.token_index, entry.payload)
 
 Use turnledger demo --contrast for the interactive text example. A custom backend consumes entry and decides how to continue. For explicit database lifetime management, compose Ledger(SQLiteStore(path)) and close the store afterward, as the supplied demo does.
 
+The SQLite audit log is readable from the command line — after `turnledger demo --store sqlite`, inspect the turn's suspend/resume records with `turnledger history`:
+
+```bash
+turnledger demo --store sqlite   # interactive demo; the ledger goes to turnledger.db
+turnledger history turn-demo     # print every LedgerEntry of the turn (seq/phase/cursor/timestamps)
+turnledger history turn-demo --json --db path/to/turnledger.db
+```
+
 ## Capabilities and integrations
 
 | Interface | Responsibility |

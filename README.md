@@ -66,6 +66,14 @@ print(entry.cursor.token_index, entry.payload)
 
 交互式文本演示可用 turnledger demo --contrast。自定义后端读取 entry 并决定如何继续。需要显式关闭数据库时，可组合 Ledger(SQLiteStore(path))，完成后调用 store.close()，如本轮示例。
 
+SQLite 审计日志可从命令行直接读取——`turnledger demo --store sqlite` 结束后，用 `turnledger history` 查看该轮的挂起/恢复记录：
+
+```bash
+turnledger demo --store sqlite   # 交互演示，账本写入 turnledger.db
+turnledger history turn-demo     # 打印该轮全部 LedgerEntry（seq/phase/cursor/时间戳）
+turnledger history turn-demo --json --db path/to/turnledger.db
+```
+
 ## 能力与集成
 
 | 接口 | 职责 |

@@ -1,4 +1,4 @@
-"""``turnledger`` CLI — the text-streaming barge-in contrast demo.
+"""``turnledger`` CLI — the text-streaming barge-in contrast demo + audit tools.
 
 Run::
 
@@ -11,15 +11,20 @@ contrast mode to see the default drop-and-restart behavior side by side.
 
 This is the m1 happy path (mvp_plan §3): ``pip install turnledger`` then
 ``turnledger demo`` to the 30-second "wow" in under 60 seconds.
+
+``turnledger history TURN_ID`` reads the durable SQLiteStore audit log back
+(the ledger side of the demo: what was suspended, when it was resumed).
 """
 
 from __future__ import annotations
 
+import json
 import queue
 import shutil
 import sys
 import threading
 import time
+from pathlib import Path
 from typing import Iterator
 
 import typer
@@ -32,6 +37,27 @@ app = typer.Typer(
     add_completion=False,
     help="TurnLedger — an interruption-continuation ledger for real-time agents.",
 )
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        from . import __version__
+
+        typer.echo(f"turnledger {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def _root(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Print the turnledger version and exit.",
+    ),
+) -> None:
+    """TurnLedger — an interruption-continuation ledger for real-time agents."""
 
 # A canned agent utterance long enough that a human can barge in mid-stream.
 DEFAULT_UTTERANCE = (
@@ -171,7 +197,7 @@ def _print_ledger_audit(entry: LedgerEntry | None, ledger: InMemoryLedger, turn_
     sys.stdout.write(f"\n{dim}  [ledger] turn={turn_id} suspended_entries={len(ledger.history(turn_id))}{reset}\n")
     if entry is not None:
         sys.stdout.write(
-            f"{dim}  [ledger] cursor=token#{entry.cursor.token_index} step={entry.step_index}"
+            f"{dim}  [ledger] cursor=token#{entry.cursor.token_index} step={entry.cursor.step_index}"
             f" sub={entry.cursor.sub_step} payload_keys={sorted(entry.payload)}{reset}\n"
         )
     sys.stdout.flush()
@@ -271,6 +297,11 @@ def demo(
     The agent yields the floor, then resumes continuing from the interrupted
     token (TurnLedger mode) — vs the default drop-and-restart behavior.
     """
+    if store not in ("memory", "sqlite"):
+        raise typer.BadParameter(
+            f"store must be 'memory' or 'sqlite', got {store!r}",
+            param_hint="--store",
+        )
     tokens = _tokenize(utterance)
     bold = "\033[1m"
     dim = "\033[2m"
@@ -303,6 +334,63 @@ def info() -> None:
     typer.echo(f"turnledger {__version__}")
     typer.echo("core: TurnCursor / LedgerEntry / Ledger / InMemoryLedger / SQLiteLedger")
     typer.echo("adapters: turnledger.adapters.text_stream (m1) / .livekit (m2, voice)")
+    typer.echo("commands: demo (barge-in contrast) / history (SQLite audit log)")
+
+
+@app.command()
+def history(
+    turn_id: str = typer.Argument(..., help="Ledger turn id whose audit log to print."),
+    db: str = typer.Option(
+        "turnledger.db", "--db", help="Path to the SQLite ledger file to read."
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Emit the audit log as a JSON list."
+    ),
+) -> None:
+    """Print the append-only audit log of a turn from the SQLite store.
+
+    Reads the durable SQLiteStore ledger (e.g. written by ``turnledger demo
+    --store sqlite``). An in-memory ledger's history is process-local and
+    cannot be read from a separate CLI process.
+    """
+    if not Path(db).exists():
+        typer.secho(
+            f"error: ledger database not found: {db} (run `turnledger demo --store sqlite` first)",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    from .store import SQLiteStore
+
+    store = SQLiteStore(db)
+    try:
+        entries = store.entries_for(turn_id)
+    finally:
+        store.close()
+
+    if not entries:
+        typer.echo(f"no entries for turn {turn_id!r} in {db}")
+        return
+
+    if json_output:
+        typer.echo(
+            json.dumps(
+                [entry.model_dump(mode="json") for entry in entries],
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return
+
+    typer.echo(f"turn {turn_id} — {len(entries)} entries from {db}")
+    for entry in entries:
+        resumed = "-" if entry.resumed_at is None else f"{entry.resumed_at:.3f}"
+        typer.echo(
+            f"  [{entry.seq}] {entry.phase:<10} token#{entry.cursor.token_index}"
+            f" step={entry.cursor.step_index} sub={entry.cursor.sub_step}"
+            f" yielded_at={entry.yielded_at:.3f} resumed_at={resumed}"
+        )
 
 
 def main() -> None:

@@ -104,7 +104,13 @@ class Store(ABC):
 
     @abstractmethod
     def latest_yielding_for(self, turn_id: str) -> LedgerEntry | None:
-        """The most recent un-resumed ``yielding`` entry, or ``None``."""
+        """The most recent un-resumed suspended entry, or ``None``.
+
+        Suspended is a STATE (``yielded_at`` set and ``resumed_at`` unset),
+        not a phase label: ``suspend()`` may stamp ``"speaking"`` /
+        ``"tool_call"`` provenance phases, and those suspends are resumable
+        exactly like default ``"yielding"`` ones.
+        """
         ...
 
     @abstractmethod
