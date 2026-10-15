@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import queue
 import shutil
+import sqlite3
 import sys
 import threading
 import time
@@ -28,6 +29,7 @@ from pathlib import Path
 from typing import Iterator
 
 import typer
+from pydantic import ValidationError
 
 from . import InMemoryLedger, SQLiteLedger, TurnCursor
 from .adapters.text_stream import TextStreamAgent
@@ -203,6 +205,11 @@ def _print_ledger_audit(entry: LedgerEntry | None, ledger: InMemoryLedger, turn_
     sys.stdout.flush()
 
 
+def _clean_db_error(exc: Exception) -> str:
+    """One-line cause for a db error (pydantic ValidationError is multiline)."""
+    return f"{type(exc).__name__}: {str(exc).splitlines()[0].strip()}"
+
+
 def _run_mode(
     tokens: list[str],
     mode: str,
@@ -302,6 +309,11 @@ def demo(
             f"store must be 'memory' or 'sqlite', got {store!r}",
             param_hint="--store",
         )
+    if token_delay < 0:
+        raise typer.BadParameter(
+            f"token delay must be >= 0 (seconds between streamed tokens), got {token_delay}",
+            param_hint="--token-delay",
+        )
     tokens = _tokenize(utterance)
     bold = "\033[1m"
     dim = "\033[2m"
@@ -314,7 +326,18 @@ def demo(
 
     def _make_ledger() -> InMemoryLedger:
         if store == "sqlite":
-            return SQLiteLedger("turnledger.db")  # type: ignore[return-value]
+            # A corrupt / unreadable turnledger.db is a caller-correctable
+            # input problem: same clean-error contract as `history`'s
+            # missing-db branch, not a mid-demo traceback.
+            try:
+                return SQLiteLedger("turnledger.db")  # type: ignore[return-value]
+            except (sqlite3.Error, OSError) as exc:
+                typer.secho(
+                    f"error: cannot open ledger database: turnledger.db ({_clean_db_error(exc)})",
+                    fg=typer.colors.RED,
+                    err=True,
+                )
+                raise typer.Exit(code=2) from exc
         return InMemoryLedger()
 
     if contrast:
@@ -363,11 +386,23 @@ def history(
 
     from .store import SQLiteStore
 
-    store = SQLiteStore(db)
+    # An existing-but-unreadable db (non-SQLite bytes, a directory, a row
+    # whose cursor/payload JSON is damaged) is a caller-correctable input
+    # problem — same clean-error contract as the missing-db branch above,
+    # not a raw sqlite3/pydantic traceback.
     try:
-        entries = store.entries_for(turn_id)
-    finally:
-        store.close()
+        store = SQLiteStore(db)
+        try:
+            entries = store.entries_for(turn_id)
+        finally:
+            store.close()
+    except (sqlite3.Error, OSError, ValidationError) as exc:
+        typer.secho(
+            f"error: cannot read ledger database: {db} ({_clean_db_error(exc)})",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=2) from exc
 
     if not entries:
         typer.echo(f"no entries for turn {turn_id!r} in {db}")
@@ -385,11 +420,14 @@ def history(
 
     typer.echo(f"turn {turn_id} — {len(entries)} entries from {db}")
     for entry in entries:
+        # Store-level writers (the public Store ABC) may persist rows with
+        # NULL timestamps — render them like resumed_at, never crash.
+        yielded = "-" if entry.yielded_at is None else f"{entry.yielded_at:.3f}"
         resumed = "-" if entry.resumed_at is None else f"{entry.resumed_at:.3f}"
         typer.echo(
             f"  [{entry.seq}] {entry.phase:<10} token#{entry.cursor.token_index}"
             f" step={entry.cursor.step_index} sub={entry.cursor.sub_step}"
-            f" yielded_at={entry.yielded_at:.3f} resumed_at={resumed}"
+            f" yielded_at={yielded} resumed_at={resumed}"
         )
 
 

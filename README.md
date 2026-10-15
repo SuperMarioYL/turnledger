@@ -9,7 +9,7 @@
 
 **TurnLedger 保存一轮输出被打断时的 cursor 与 payload，支持内存或 SQLite 存储，再把挂起状态交还给 adapter 继续处理。**
 
-`Python 3.10+` · [MIT](LICENSE) · [GitHub](https://github.com/SuperMarioYL/turnledger) · [网站](https://turnledger.lei6393.com)
+`v0.3.0` · `Python 3.10+` · [MIT](LICENSE) · [GitHub](https://github.com/SuperMarioYL/turnledger) · [网站](https://turnledger.lei6393.com)
 
 ## 为什么需要它
 

@@ -18,7 +18,7 @@ import turnledger
 from turnledger.cli import app
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED = "0.2.0"
+EXPECTED = "0.3.0"
 
 runner = CliRunner()
 

@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-16
+
+### Fixed
+- **Unreadable ledger dbs are a clean error.** `turnledger history --db`
+  leaked raw `sqlite3.DatabaseError` / `OperationalError` /
+  pydantic `ValidationError` tracebacks (exit 1) when the file existed but
+  was not a readable ledger — non-SQLite bytes, a directory, or a row whose
+  cursor/payload JSON is damaged. These now report
+  `error: cannot read ledger database: ...` and exit 2, matching the
+  missing-db contract. `turnledger demo --store sqlite` on a corrupt
+  `./turnledger.db` gets the same treatment instead of a mid-demo traceback.
+- **NULL-timestamp rows render instead of crashing.** A schema-valid
+  `LedgerEntry` with `yielded_at` NULL — possible through the public Store
+  ABC, whose `save` persists model-default rows verbatim — crashed
+  `turnledger history` with `TypeError: unsupported format string passed to
+  NoneType.__format__`. NULL timestamps now render as `-`, exactly like
+  `resumed_at` already did; `--json` output is unchanged.
+- **Negative `--token-delay` is a usage error.** `turnledger demo -d -1`
+  crashed with `ValueError: sleep length must be non-negative` inside the
+  streaming loop; it now raises a clean `--token-delay` usage error
+  (exit 2), consistent with `--store` validation.
+
+### Changed
+- Version lockstep sweep to 0.3.0: `VERSION`, `pyproject.toml`
+  `[project].version`, `turnledger.__version__`, CLI `--version`, the README
+  hero lines, and `web/site.json` `meta.implementation_version`. A new
+  `tests/test_version_consistency.py` pins the lockstep across every
+  surface (the installed-binary `--version` check is skipped when
+  `turnledger` is not on PATH).
+
 ## [0.2.0] — 2026-09-10
 
 ### Fixed
@@ -74,3 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is roadmap only in v0.1 — not built.
 - TurnLedger Cloud hosted backend is signaled in the README roadmap; the
   OSS library stays free.
+
+[Unreleased]: https://github.com/SuperMarioYL/turnledger/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/SuperMarioYL/turnledger/releases/tag/v0.3.0
+[0.2.0]: https://github.com/SuperMarioYL/turnledger/releases/tag/v0.2.0
+[0.1.0]: https://github.com/SuperMarioYL/turnledger/releases/tag/v0.1.0

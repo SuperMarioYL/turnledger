@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "turnledger"
-version = "0.2.0"
+version = "0.3.0"
 description = "An interruption-continuation ledger primitive for real-time agents — save/yield/resume-continue instead of drop-and-restart."
 readme = "README.md"
 license = "MIT"

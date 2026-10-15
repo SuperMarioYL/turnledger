@@ -9,7 +9,7 @@
 
 **TurnLedger stores a turn’s cursor and payload at interruption, using memory or SQLite, and returns the suspended state to an adapter for continuation.**
 
-`Python 3.10+` · [MIT](LICENSE) · [GitHub](https://github.com/SuperMarioYL/turnledger) · [Website](https://turnledger.lei6393.com)
+`v0.3.0` · `Python 3.10+` · [MIT](LICENSE) · [GitHub](https://github.com/SuperMarioYL/turnledger) · [Website](https://turnledger.lei6393.com)
 
 ## Why it helps
 
