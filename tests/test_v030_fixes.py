@@ -158,8 +158,15 @@ class TestTokenDelayValidation:
     def test_negative_token_delay_is_usage_error(self) -> None:
         result = runner.invoke(app, ["demo", "--no-contrast", "-d", "-0.5"], input="")
         assert result.exit_code == 2, result.output
-        assert "--token-delay" in _combined(result)
         assert "Traceback" not in _combined(result)
+        # The rendered error panel is rich-formatted and GH runners force
+        # ANSI + elide the panel at their terminal width, so pin the message
+        # on the raw exception (standalone_mode=False) instead of the output.
+        raw = runner.invoke(
+            app, ["demo", "--no-contrast", "-d", "-0.5"], input="", standalone_mode=False
+        )
+        assert raw.exception is not None
+        assert "token delay must be >= 0" in str(raw.exception)
 
     def test_zero_token_delay_still_runs(self, tmp_path) -> None:
         result = runner.invoke(app, ["demo", "--no-contrast", "-d", "0"], input="")
