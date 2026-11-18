@@ -9,7 +9,7 @@
 
 **TurnLedger stores a turn’s cursor and payload at interruption, using memory or SQLite, and returns the suspended state to an adapter for continuation.**
 
-`v0.3.0` · `Python 3.10+` · [MIT](LICENSE) · [GitHub](https://github.com/SuperMarioYL/turnledger) · [Website](https://turnledger.lei6393.com)
+`v0.4.0` · `Python 3.10+` · [MIT](LICENSE) · [GitHub](https://github.com/SuperMarioYL/turnledger) · [Website](https://turnledger.lei6393.com)
 
 ## Why it helps
 
@@ -73,6 +73,8 @@ turnledger demo --store sqlite   # interactive demo; the ledger goes to turnledg
 turnledger history turn-demo     # print every LedgerEntry of the turn (seq/phase/cursor/timestamps)
 turnledger history turn-demo --json --db path/to/turnledger.db
 ```
+
+`turnledger history` opens the ledger file read-only: pointing it at another SQLite file or an empty file gives an explicit `error: cannot read ledger database` message instead of creating tables or modifying the file, and `--json` prints `[]` for a turn with no entries — the output is always a JSON list.
 
 ## Capabilities and integrations
 

@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-11-19
+
+### Fixed
+- **Damaged payload rows are a clean error.** `turnledger history` leaked a raw
+  `json.JSONDecodeError` traceback (exit 1) when a row's `payload` column was
+  not valid JSON. The v0.3.0 conversion only caught pydantic `ValidationError`
+  from the `cursor` column, so the payload half of the documented
+  "cursor/payload JSON is damaged" contract was unenforced. Both columns now
+  report `error: cannot read ledger database: ...` and exit 2.
+- **The audit reader never writes to the database it reads.**
+  `turnledger history` built a write-mode store just to read one turn, which ran
+  `CREATE TABLE IF NOT EXISTS ledger_entries` inside whatever SQLite file it was
+  pointed at — adding a table to a foreign database and turning a 0-byte file
+  into a 16KB db. It now opens the file read-only; a file with no ledger table
+  is a clean "cannot read ledger database" error and the file is untouched.
+- **`history --json` is always JSON.** A turn with no entries printed the human
+  "no entries" line even under `--json`, so `json.loads` failed exactly where a
+  script is most likely to land. The empty case now prints `[]` (text mode keeps
+  the readable line).
+- **Non-finite `--token-delay` is a usage error.** `-d nan` and `-d inf` passed
+  the `< 0` guard and crashed inside `time.sleep` with `ValueError` /
+  `OverflowError` (exit 1). The value is now validated as finite and, like a
+  negative delay, raises a clean `--token-delay` usage error (exit 2).
+
+### Changed
+- The demo's closing audit line reports `entries=<turn log length>` instead of
+  labelling that same number `suspended_entries` (one barge-in printed 2: the
+  yielding record plus its resuming record). The CLI also drops an unused
+  duplicate yield closure left over from the inline barge-in path.
+- Version lockstep sweep to 0.4.0: `VERSION`, `pyproject.toml`
+  `[project].version`, `turnledger.__version__`, CLI `--version`, the README
+  hero lines, and `web/site.json` `meta.implementation_version`.
+
 ## [0.3.0] — 2026-10-16
 
 ### Fixed
@@ -105,7 +138,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TurnLedger Cloud hosted backend is signaled in the README roadmap; the
   OSS library stays free.
 
-[Unreleased]: https://github.com/SuperMarioYL/turnledger/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/SuperMarioYL/turnledger/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/SuperMarioYL/turnledger/releases/tag/v0.4.0
 [0.3.0]: https://github.com/SuperMarioYL/turnledger/releases/tag/v0.3.0
 [0.2.0]: https://github.com/SuperMarioYL/turnledger/releases/tag/v0.2.0
 [0.1.0]: https://github.com/SuperMarioYL/turnledger/releases/tag/v0.1.0

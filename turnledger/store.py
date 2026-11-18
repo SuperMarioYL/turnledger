@@ -24,6 +24,19 @@ from .cursor import TurnCursor
 from .ledger import LedgerEntry, Phase
 
 
+def _row_to_entry(row: sqlite3.Row) -> LedgerEntry:
+    """Map one ``ledger_entries`` row to a ``LedgerEntry`` (shared read path)."""
+    return LedgerEntry(
+        turn_id=row["turn_id"],
+        seq=row["seq"],
+        phase=row["phase"],
+        cursor=TurnCursor.model_validate_json(row["cursor"]),
+        payload=json.loads(row["payload"]) if row["payload"] else {},
+        yielded_at=row["yielded_at"],
+        resumed_at=row["resumed_at"],
+    )
+
+
 class InMemoryStore:
     """In-process dict-backed store. Default; lost on process exit."""
 
@@ -110,17 +123,6 @@ class SQLiteStore:
         with self._lock:
             self._conn.close()
 
-    def _row_to_entry(self, row: sqlite3.Row) -> LedgerEntry:
-        return LedgerEntry(
-            turn_id=row["turn_id"],
-            seq=row["seq"],
-            phase=row["phase"],
-            cursor=TurnCursor.model_validate_json(row["cursor"]),
-            payload=json.loads(row["payload"]) if row["payload"] else {},
-            yielded_at=row["yielded_at"],
-            resumed_at=row["resumed_at"],
-        )
-
     def save(self, entry: LedgerEntry) -> None:
         with self._lock:
             self._conn.execute(
@@ -147,7 +149,7 @@ class SQLiteStore:
                 (turn_id,),
             )
             row = cur.fetchone()
-            return self._row_to_entry(row) if row else None
+            return _row_to_entry(row) if row else None
 
     def latest_yielding_for(self, turn_id: str) -> LedgerEntry | None:
         with self._lock:
@@ -161,7 +163,7 @@ class SQLiteStore:
                 (turn_id,),
             )
             row = cur.fetchone()
-            return self._row_to_entry(row) if row else None
+            return _row_to_entry(row) if row else None
 
     def mark_resumed(self, turn_id: str, seq: int, resumed_at: float) -> None:
         with self._lock:
@@ -178,7 +180,7 @@ class SQLiteStore:
                 "SELECT * FROM ledger_entries WHERE turn_id = ? ORDER BY seq ASC",
                 (turn_id,),
             )
-            return [self._row_to_entry(r) for r in cur.fetchall()]
+            return [_row_to_entry(r) for r in cur.fetchall()]
 
     def next_seq(self, turn_id: str) -> int:
         with self._lock:
@@ -192,6 +194,27 @@ class SQLiteStore:
         with self._lock:
             self._conn.execute("DELETE FROM ledger_entries")
             self._conn.commit()
+
+    @classmethod
+    def read_entries(cls, path: str, turn_id: str) -> list[LedgerEntry]:
+        """Read one turn from an existing ledger file without creating or modifying it.
+
+        This is the read-only counterpart of constructing a store: the CLI audit
+        reader must not run ``CREATE TABLE IF NOT EXISTS`` inside whatever SQLite
+        file the user points it at. A file with no ``ledger_entries`` table (a
+        foreign db, an empty file) raises ``sqlite3.OperationalError``, which
+        callers convert to their "not a readable ledger" error.
+        """
+        conn = sqlite3.connect(f"{Path(path).resolve().as_uri()}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(
+                "SELECT * FROM ledger_entries WHERE turn_id = ? ORDER BY seq ASC",
+                (turn_id,),
+            ).fetchall()
+        finally:
+            conn.close()
+        return [_row_to_entry(row) for row in rows]
 
 
 __all__ = ["InMemoryStore", "SQLiteStore"]

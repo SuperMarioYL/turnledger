@@ -19,6 +19,7 @@ This is the m1 happy path (mvp_plan §3): ``pip install turnledger`` then
 from __future__ import annotations
 
 import json
+import math
 import queue
 import shutil
 import sqlite3
@@ -32,8 +33,7 @@ import typer
 from pydantic import ValidationError
 
 from . import InMemoryLedger, SQLiteLedger, TurnCursor
-from .adapters.text_stream import TextStreamAgent
-from .ledger import LedgerEntry
+from .ledger import Ledger, LedgerEntry
 
 app = typer.Typer(
     add_completion=False,
@@ -193,10 +193,10 @@ def _print_agent_header(mode: str) -> None:
     sys.stdout.flush()
 
 
-def _print_ledger_audit(entry: LedgerEntry | None, ledger: InMemoryLedger, turn_id: str) -> None:
+def _print_ledger_audit(entry: LedgerEntry | None, ledger: Ledger, turn_id: str) -> None:
     dim = "\033[2m"
     reset = "\033[0m"
-    sys.stdout.write(f"\n{dim}  [ledger] turn={turn_id} suspended_entries={len(ledger.history(turn_id))}{reset}\n")
+    sys.stdout.write(f"\n{dim}  [ledger] turn={turn_id} entries={len(ledger.history(turn_id))}{reset}\n")
     if entry is not None:
         sys.stdout.write(
             f"{dim}  [ledger] cursor=token#{entry.cursor.token_index} step={entry.cursor.step_index}"
@@ -215,27 +215,12 @@ def _run_mode(
     mode: str,
     *,
     token_delay: float,
-    ledger: InMemoryLedger,
+    ledger: Ledger,
     turn_id: str,
 ) -> None:
     kb = _KeyboardBargeIn()
     _print_agent_header(mode)
-    agent = TextStreamAgent(tokens, ledger, turn_id=turn_id)
-
     suspended_entry: LedgerEntry | None = None
-
-    def _on_yield(entry: LedgerEntry) -> str:
-        nonlocal suspended_entry
-        suspended_entry = entry
-        _print_yield_header()
-        utter = kb.on_yield(entry)
-        _print_user_block(utter)
-        if mode == "restart":
-            _print_restart_header()
-        else:
-            assert entry.cursor is not None
-            _print_resume_header(entry.cursor.token_index)
-        return utter
 
     kb.start()
     try:
@@ -309,9 +294,9 @@ def demo(
             f"store must be 'memory' or 'sqlite', got {store!r}",
             param_hint="--store",
         )
-    if token_delay < 0:
+    if not math.isfinite(token_delay) or token_delay < 0:
         raise typer.BadParameter(
-            f"token delay must be >= 0 (seconds between streamed tokens), got {token_delay}",
+            f"token delay must be >= 0 and finite (seconds between streamed tokens), got {token_delay}",
             param_hint="--token-delay",
         )
     tokens = _tokenize(utterance)
@@ -324,13 +309,13 @@ def demo(
     sys.stdout.write(f"{dim}Press Enter mid-stream to barge in; type a line + Enter to finish.{reset}\n")
     sys.stdout.write("=" * min(cols, 80) + "\n")
 
-    def _make_ledger() -> InMemoryLedger:
+    def _make_ledger() -> Ledger:
         if store == "sqlite":
             # A corrupt / unreadable turnledger.db is a caller-correctable
             # input problem: same clean-error contract as `history`'s
             # missing-db branch, not a mid-demo traceback.
             try:
-                return SQLiteLedger("turnledger.db")  # type: ignore[return-value]
+                return SQLiteLedger("turnledger.db")
             except (sqlite3.Error, OSError) as exc:
                 typer.secho(
                     f"error: cannot open ledger database: turnledger.db ({_clean_db_error(exc)})",
@@ -389,24 +374,17 @@ def history(
     # An existing-but-unreadable db (non-SQLite bytes, a directory, a row
     # whose cursor/payload JSON is damaged) is a caller-correctable input
     # problem — same clean-error contract as the missing-db branch above,
-    # not a raw sqlite3/pydantic traceback.
+    # not a raw sqlite3/pydantic traceback. The read is read-only: pointing
+    # the audit reader at a foreign SQLite file must not migrate it.
     try:
-        store = SQLiteStore(db)
-        try:
-            entries = store.entries_for(turn_id)
-        finally:
-            store.close()
-    except (sqlite3.Error, OSError, ValidationError) as exc:
+        entries = SQLiteStore.read_entries(db, turn_id)
+    except (sqlite3.Error, OSError, json.JSONDecodeError, ValidationError) as exc:
         typer.secho(
             f"error: cannot read ledger database: {db} ({_clean_db_error(exc)})",
             fg=typer.colors.RED,
             err=True,
         )
         raise typer.Exit(code=2) from exc
-
-    if not entries:
-        typer.echo(f"no entries for turn {turn_id!r} in {db}")
-        return
 
     if json_output:
         typer.echo(
@@ -416,6 +394,10 @@ def history(
                 indent=2,
             )
         )
+        return
+
+    if not entries:
+        typer.echo(f"no entries for turn {turn_id!r} in {db}")
         return
 
     typer.echo(f"turn {turn_id} — {len(entries)} entries from {db}")

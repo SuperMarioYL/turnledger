@@ -9,7 +9,7 @@
 
 **TurnLedger 保存一轮输出被打断时的 cursor 与 payload，支持内存或 SQLite 存储，再把挂起状态交还给 adapter 继续处理。**
 
-`v0.3.0` · `Python 3.10+` · [MIT](LICENSE) · [GitHub](https://github.com/SuperMarioYL/turnledger) · [网站](https://turnledger.lei6393.com)
+`v0.4.0` · `Python 3.10+` · [MIT](LICENSE) · [GitHub](https://github.com/SuperMarioYL/turnledger) · [网站](https://turnledger.lei6393.com)
 
 ## 为什么需要它
 
@@ -73,6 +73,8 @@ turnledger demo --store sqlite   # 交互演示，账本写入 turnledger.db
 turnledger history turn-demo     # 打印该轮全部 LedgerEntry（seq/phase/cursor/时间戳）
 turnledger history turn-demo --json --db path/to/turnledger.db
 ```
+
+`turnledger history` 以只读方式打开账本文件：指向其他 SQLite 文件或空文件会得到明确的 `error: cannot read ledger database` 提示，不会创建表或改动文件；`--json` 在没有记录时输出 `[]`，输出始终是 JSON 列表。
 
 ## 能力与集成
 
